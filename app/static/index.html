@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lakebase Hybrid Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-inner">
+    <div>
+      <h1>Lakebase Search</h1>
+      <p class="sub">Find the right order by code or by complaint</p>
+    </div>
+    <div class="badges" id="badges"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="panel search-panel">
+    <div class="eyebrow">Retailer support app · all inside Lakebase</div>
+    <form id="searchForm" class="searchbar" autocomplete="off">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" name="q" type="search" placeholder="Try an order code, tracking number, or describe the problem…" aria-label="Search">
+      <button type="submit" class="btn primary">Search</button>
+    </form>
+    <div class="chips" id="examples" aria-label="Example queries"></div>
+
+    <details class="filters" id="filters">
+      <summary>Filters <span id="filterCount" class="count"></span></summary>
+      <div class="filter-grid">
+        <label>Customer
+          <select id="customer"><option value="">Any customer</option></select>
+        </label>
+        <label>From <input id="dateFrom" type="date"></label>
+        <label>To <input id="dateTo" type="date"></label>
+        <label>Refund status
+          <select id="refund">
+            <option value="">Any</option><option value="none">No return</option>
+            <option value="requested">Requested</option><option value="approved">Approved</option>
+            <option value="refunded">Refunded</option><option value="denied">Denied</option>
+          </select>
+        </label>
+        <fieldset class="sources">
+          <legend>Sources</legend>
+          <div id="sourceChips"></div>
+        </fieldset>
+        <button type="button" class="btn ghost" id="clearFilters">Clear</button>
+      </div>
+    </details>
+  </section>
+
+  <section id="best" class="best hidden" aria-live="polite"></section>
+
+  <section id="results" class="results hidden">
+    <div class="col" data-mode="keyword">
+      <div class="col-head">
+        <div class="col-title"><span class="glyph">Aa</span> Keyword <small>BM25 · lakebase_bm25</small></div>
+        <div class="col-meta"></div>
+      </div>
+      <p class="col-desc">Exact IDs, tracking codes and names</p>
+      <ol class="list"></ol>
+      <details class="sql"><summary>SQL</summary><pre></pre></details>
+    </div>
+    <div class="col" data-mode="vector">
+      <div class="col-head">
+        <div class="col-title"><span class="glyph">⁘</span> Vector <small>semantic · lakebase_ann</small></div>
+        <div class="col-meta"></div>
+      </div>
+      <p class="col-desc">Same issue, any words</p>
+      <ol class="list"></ol>
+      <details class="sql"><summary>SQL</summary><pre></pre></details>
+    </div>
+    <div class="col hybrid" data-mode="hybrid">
+      <div class="col-head">
+        <div class="col-title"><span class="glyph">✦</span> Hybrid <small>RRF · k = 60</small></div>
+        <div class="col-meta"></div>
+      </div>
+      <p class="col-desc">Merges both rankings in one query on live rows</p>
+      <ol class="list"></ol>
+      <details class="sql"><summary>SQL</summary><pre></pre></details>
+    </div>
+  </section>
+
+  <section id="empty" class="panel intro">
+    <h2>How this demo works</h2>
+    <div class="flow">
+      <div class="step"><b>Exact code</b><span>“ORD-48213” → keyword search</span></div>
+      <div class="step"><b>Plain words</b><span>“arrived damaged” → vector search</span></div>
+      <div class="step accent"><b>Hybrid</b><span>RRF merges both lists, filters by customer, date and refund status</span></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="cap">1 · Capabilities</button>
+      <button role="tab" aria-selected="false" data-tab="setup">2 · Set it up</button>
+      <button role="tab" aria-selected="false" data-tab="watch">3 · Watch out</button>
+    </div>
+    <ul class="cards" data-panel="cap">
+      <li><b>Keyword (full-text) search</b><span>BM25 ranking: exact order numbers, tracking codes, IDs</span></li>
+      <li><b>Vector (semantic) search</b><span>“Arrived damaged” matches “showed up cracked”</span></li>
+      <li><b>Hybrid search (RRF)</b><span>Merges both rankings in SQL; filter and join live rows</span></li>
+      <li><b>pgvector-compatible, storage-backed</b><span>Same types and operators; ready after scale-to-zero</span></li>
+    </ul>
+    <ul class="cards hidden" data-panel="setup">
+      <li><b>Enable Lakebase Search</b><span>Project Settings → Lakebase Search · Postgres 16+</span></li>
+      <li><b>Install lakebase_vector + lakebase_text</b><span><code>CREATE EXTENSION … (CASCADE adds pgvector)</code></span></li>
+      <li><b>Add an embedding and a tsvector column</b><span>Orders, shipments, returns, conversations, service notes → <code>retail.support_docs</code></span></li>
+      <li><b>Load rows, then build both indexes</b><span><code>lakebase_ann</code> for meaning · <code>lakebase_bm25</code> for words</span></li>
+    </ul>
+    <ul class="cards warn hidden" data-panel="watch">
+      <li><b>Enabling can't be undone</b><span>Restarts all computes and drops connections</span></li>
+      <li><b>Build BM25 after the data load</b><span>Its word statistics are computed at build time</span></li>
+      <li><b>Embeddings are your job</b><span>This app uses databricks-gte-large-en → VECTOR(1024)</span></li>
+      <li><b>Hybrid ranks; it doesn't decide</b><span>Check IDs and status; ask when matches are close</span></li>
+    </ul>
+  </section>
+</main>
+
+<aside id="drawer" class="drawer" aria-hidden="true">
+  <div class="drawer-inner">
+    <button class="close" id="closeDrawer" aria-label="Close">×</button>
+    <div id="drawerBody"></div>
+  </div>
+</aside>
+<div id="scrim" class="scrim"></div>
+
+<footer class="wrap foot">Source: Databricks Lakebase Search · lakebase_vector &amp; lakebase_text · data is synthetic</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>
