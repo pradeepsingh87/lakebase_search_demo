@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lakebase-search-support-demo"
+version = "0.1.0"
+description = "A small customer-support hybrid search demo for Lakebase Search"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["demo*"]
